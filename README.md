@@ -154,6 +154,34 @@ cp .env.example .env
 
 This section explains how to run the entire system locally from scratch.
 
+---
+
+### ⚡ Quick Start (Single Command / One-Click — No Docker Needed)
+
+If you are on Windows or prefer running without Docker:
+
+```powershell
+# In PowerShell:
+.\start.ps1
+```
+
+Or simply double-click **`start.bat`** in File Explorer!
+
+This automated script will:
+1. Create `.env` from `.env.example` if it doesn't exist.
+2. Verify Redis on port `6379` (or start the pre-bundled Windows Redis binary).
+3. Automatically launch your browser at **`http://localhost:5173`**.
+4. Concurrently run the **Backend API (Port 4000)**, **BullMQ Worker**, and **Web Frontend (Port 5173)** in a single unified terminal with live color-coded logs!
+
+Alternatively, if you already have Redis running, simply run:
+```bash
+npm install
+npm run db:push
+npm run dev
+```
+
+---
+
 ### 📋 Prerequisites & Default Ports
 
 | Service | Port | Description |

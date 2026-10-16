@@ -8,10 +8,13 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspaces",
+    "start": "concurrently -k -n \"api,worker,web\" -c \"blue,green,magenta\" \"npm run dev:api\" \"npm run dev:worker\" \"npm run dev:web\"",
+    "dev": "concurrently -k -n \"api,worker,web\" -c \"blue,green,magenta\" \"npm run dev:api\" \"npm run dev:worker\" \"npm run dev:web\"",
+    "dev:all": "concurrently -k -n \"api,worker,web\" -c \"blue,green,magenta\" \"npm run dev:api\" \"npm run dev:worker\" \"npm run dev:web\"",
     "dev:api": "npm run dev --workspace=reachinbox-api",
     "dev:worker": "npm run dev --workspace=reachinbox-worker",
     "dev:web": "npm run dev --workspace=reachinbox-web",
+    "redis:win": "tools\\redis\\redis-server.exe --port 6379 --bind 127.0.0.1",
     "build": "npm run build --workspaces",
     "db:generate": "prisma generate --schema=./prisma/schema.prisma",
     "db:push": "prisma db push --schema=./prisma/schema.prisma",
@@ -20,6 +23,7 @@
     "test": "npm run test --workspaces"
   },
   "devDependencies": {
+    "concurrently": "^10.0.6",
     "prisma": "^5.21.1",
     "typescript": "^5.6.3"
   }
