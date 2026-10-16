@@ -1,0 +1,180 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  PAUSED
+  CANCELLED
+}
+
+enum EmailStatus {
+  SCHEDULED
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+  RATE_LIMITED
+}
+
+enum SlackState {
+  CONNECTED
+  DISCONNECTED
+}
+
+enum OutboxStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  googleId           String              @unique
+  name               String
+  email              String              @unique
+  avatarUrl          String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  campaigns          EmailCampaign[]
+  emailRecords       EmailRecord[]
+  senderAccounts     SenderAccount[]
+  slackConnection    SlackConnection?
+  notificationEvents NotificationEvent[]
+
+  @@index([email])
+  @@index([googleId])
+}
+
+model SenderAccount {
+  id                 String              @id @default(cuid())
+  ownerId            String
+  owner              User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  senderEmail        String
+  senderName         String
+  smtpHost           String
+  smtpPort           Int                 @default(587)
+  smtpUser           String
+  smtpPass           String
+  isDefault          Boolean             @default(false)
+  enabled            Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  emailRecords       EmailRecord[]
+  notificationEvents NotificationEvent[]
+
+  @@index([ownerId])
+  @@index([senderEmail])
+}
+
+model EmailCampaign {
+  id                 String          @id @default(cuid())
+  ownerId            String
+  owner              User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name               String
+  subject            String
+  body               String
+  startTime          DateTime
+  minDelayMs         Int             @default(2000)
+  hourlyLimit        Int             @default(200)
+  idempotencyKey     String          @unique
+  status             CampaignStatus  @default(SCHEDULED)
+  totalRecipients    Int             @default(0)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  emailRecords       EmailRecord[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([startTime])
+}
+
+model EmailRecord {
+  id                     String         @id @default(cuid())
+  campaignId             String
+  campaign               EmailCampaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  ownerId                String
+  owner                  User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  senderAccountId        String?
+  senderAccount          SenderAccount? @relation(fields: [senderAccountId], references: [id], onDelete: SetNull)
+  recipientEmail         String
+  subject                String
+  body                   String
+  scheduledTime          DateTime
+  status                 EmailStatus    @default(SCHEDULED)
+  attempts               Int            @default(0)
+  bullmqJobId            String         @unique
+  sentTime               DateTime?
+  etherealPreviewUrl     String?
+  smtpMessageId          String?
+  failureReason          String?
+  rateLimitDeferredUntil DateTime?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  @@index([ownerId, status])
+  @@index([campaignId])
+  @@index([scheduledTime])
+  @@index([status])
+  @@index([recipientEmail])
+  @@index([bullmqJobId])
+}
+
+model SlackConnection {
+  id                   String     @id @default(cuid())
+  ownerId              String     @unique
+  owner                User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  encryptedAccessToken String
+  teamId               String
+  teamName             String
+  channelId            String?
+  channelName          String?
+  incomingWebhookUrl   String?
+  connectedState       SlackState @default(CONNECTED)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  @@index([ownerId])
+}
+
+model NotificationEvent {
+  id                 String         @id @default(cuid())
+  ownerId            String
+  owner              User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  senderAccountId    String?
+  senderAccount      SenderAccount? @relation(fields: [senderAccountId], references: [id], onDelete: SetNull)
+  rateLimitWindow    String
+  notificationType   String         @default("HOURLY_LIMIT_REACHED")
+  deliveryState      String         @default("DELIVERED")
+  payload            Json
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([ownerId, rateLimitWindow, notificationType])
+}
+
+model OutboxEvent {
+  id          String       @id @default(cuid())
+  eventType   String       @default("EMAIL_SCHEDULED")
+  aggregateId String
+  payload     Json
+  status      OutboxStatus @default(PENDING)
+  attempts    Int          @default(0)
+  lastError   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([status, createdAt])
+  @@index([aggregateId])
+}

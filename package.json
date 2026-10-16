@@ -1,0 +1,26 @@
+{
+  "name": "reachinbox-email-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ReachInbox Email Outreach Job Scheduler - Full-Stack Assignment",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "dev:api": "npm run dev --workspace=reachinbox-api",
+    "dev:worker": "npm run dev --workspace=reachinbox-worker",
+    "dev:web": "npm run dev --workspace=reachinbox-web",
+    "build": "npm run build --workspaces",
+    "db:generate": "prisma generate --schema=./prisma/schema.prisma",
+    "db:push": "prisma db push --schema=./prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
+    "db:seed": "node apps/api/dist/scripts/seed.js",
+    "test": "npm run test --workspaces"
+  },
+  "devDependencies": {
+    "prisma": "^5.21.1",
+    "typescript": "^5.6.3"
+  }
+}
