@@ -150,53 +150,157 @@ cp .env.example .env
 
 ---
 
-## 🛠️ Getting Started (Local Development)
+## 🛠️ Complete Step-by-Step Execution Guide
 
-### 1. Prerequisites
-- **Node.js**: v18.0.0 or higher (v22 tested)
-- **PostgreSQL**: v14+ running locally (or via Docker Compose)
-- **Redis**: v5+ (v7 recommended) running on `localhost:6379`
+This section explains how to run the entire system locally from scratch.
 
-### 2. Start Supporting Infrastructure
+### 📋 Prerequisites & Default Ports
 
-**Option A — Using Local Services:**
-If PostgreSQL and Redis are installed locally:
-- PostgreSQL running on port `5432` with database `reachinbox_db`
-- Redis running on port `6379`
+| Service | Port | Description |
+|---|---|---|
+| **Node.js** | >= 18.0.0 (v20 or v22 recommended) | Monorepo runtime |
+| **PostgreSQL** | `5432` | Relational storage for campaigns, users, and outbox |
+| **Redis** | `6379` | BullMQ delayed job queue & atomic rate limiting |
+| **Backend API** | `4000` | Express.js REST API server & Bull Board (`/admin/queues`) |
+| **Frontend Web** | `5173` | React 18 + Vite dashboard |
+| **Elasticsearch** (Optional) | `9200` | Full-text search (DB fallback engages automatically if offline) |
 
-**Option B — Using Docker Compose:**
+---
+
+### Step 1: Environment Configuration
+
+Copy the sample environment file to `.env` in the root directory:
+
+```bash
+# On Linux / macOS / Git Bash:
+cp .env.example .env
+
+# On Windows PowerShell:
+Copy-Item .env.example .env
+```
+
+> **Note for Reviewers & Evaluators**: The default `.env` is pre-configured to connect to `localhost:5432` (`postgres:1234`) and `localhost:6379`. You do **not** need external Google or Slack credentials to run or test the full system; an instant one-click Dev Demo login is included out of the box!
+
+---
+
+### Step 2: Start Redis & PostgreSQL
+
+Choose whichever method matches your environment:
+
+#### Option A: Using Docker Compose (Recommended for clean environments)
+If you have Docker installed, start PostgreSQL, Redis, and Elasticsearch with one command:
+
 ```bash
 docker compose up -d
 ```
-This spins up PostgreSQL (`5432`), Redis (`6379`), and Elasticsearch (`9200`).
 
-### 3. Install Dependencies & Build Packages
+#### Option B: Using Native / Local Services
+- **PostgreSQL**: Ensure PostgreSQL is running on port `5432`. Create a database named `reachinbox_db` if it does not already exist:
+  ```sql
+  CREATE DATABASE reachinbox_db;
+  ```
+- **Redis**: Start Redis server on port `6379`:
+  - **Linux / macOS**: `redis-server`
+  - **Windows**: Run the pre-bundled Redis binary:
+    ```powershell
+    & ".\tools\redis\redis-server.exe" --port 6379 --bind 127.0.0.1
+    ```
+
+---
+
+### Step 3: Install Dependencies & Initialize Database
+
+Run from the root directory:
+
 ```bash
-# Install all dependencies across the monorepo
+# 1. Install all dependencies across the monorepo workspaces
 npm install
 
-# Build shared package
+# 2. Build the shared TypeScript library
 npm run build --workspace=@reachinbox/shared
 
-# Synchronize Prisma schema with PostgreSQL
+# 3. Push the Prisma schema to your PostgreSQL database
 npm run db:push
 ```
 
-### 4. Run Services
-In three separate terminal windows:
+---
 
+### Step 4: Run the Application Services
+
+Start the three core services in separate terminal windows:
+
+#### 🖥️ Terminal 1: Backend REST API Server
 ```bash
-# Terminal 1: Backend API
 npm run dev:api
+```
+- Listens on: **`http://localhost:4000`**
+- Health check: **`http://localhost:4000/api/health`**
+- Bull Board Queue Telemetry: **`http://localhost:4000/admin/queues`**
 
-# Terminal 2: BullMQ Worker
+#### ⚙️ Terminal 2: BullMQ Queue Worker Process
+```bash
 npm run dev:worker
+```
+- Processes delayed jobs with concurrency = 5.
+- Enforces distributed rate limiting & atomic inter-send delay via Redis.
+- Delivers emails to Ethereal SMTP fake inbox and captures live preview URLs.
 
-# Terminal 3: React Frontend
+#### 🌐 Terminal 3: React Frontend Web Dashboard
+```bash
 npm run dev:web
 ```
+- Runs the Vite development server at: **`http://localhost:5173`**
 
-Open **`http://localhost:5173`** in your browser.
+---
+
+### Step 5: How to Test & Verify in Browser
+
+1. **Access the Dashboard**:
+   Open **`http://localhost:5173`** in your browser.
+2. **Instant Evaluator Login**:
+   On the Login page, click **"Enter Dashboard (Instant Dev Session)"**. This authenticates you immediately with the evaluator profile (`Oliver Brown`, `oliver.brown@domain.io`) without needing Google Cloud credentials.
+3. **Schedule Emails via Compose Modal**:
+   - Click the green **"Compose New Email"** button.
+   - Enter a Subject, Body, and Recipients (or upload a `.csv` / `.txt` lead list to see the parsed email counter).
+   - Configure **Delay between 2 emails** (e.g., `2` sec) and **Hourly Limit** (e.g., `50`).
+   - Click **Send Later ▾** and pick a preset (Tomorrow 10am, 1pm, 3pm, or Pick date & time) or click **"Send Now"**.
+4. **Inspect Scheduled & Sent Tables**:
+   - Switch between **Scheduled Emails** (amber `Due: ...` badge) and **Sent Emails** (green `Sent` badge).
+   - Click any sent email row to open the Reading View and click the external link icon **`↗`** to view the live rendered email on `ethereal.email`.
+5. **View Real-Time Queue Telemetry**:
+   - Open **`http://localhost:4000/admin/queues`** to view Bull Board displaying active, delayed, waiting, and completed jobs.
+
+---
+
+### Step 6: Testing Server Restart Resilience (Crash Survival)
+
+To demonstrate that jobs are never lost or duplicated across restarts:
+1. In the Compose modal, schedule 5 emails to be sent 2 minutes in the future.
+2. Verify the jobs appear in the **Scheduled Emails** tab and in Bull Board under "Delayed".
+3. Kill the Backend API and Worker terminal processes (`Ctrl+C`).
+4. Wait 15 seconds.
+5. Restart both services (`npm run dev:api` and `npm run dev:worker`).
+6. Observe that when the scheduled time arrives, all jobs are picked up and delivered on schedule without losing state or duplicating sends!
+
+---
+
+### Step 7: Production Build & Execution (Optional)
+
+To test production artifacts rather than development mode:
+
+```bash
+# 1. Build all packages and applications
+npm run build
+
+# 2. Run API in production
+node apps/api/dist/index.js
+
+# 3. Run Worker in production
+node apps/worker/dist/index.js
+
+# 4. Preview Frontend bundle
+npm run preview --workspace=reachinbox-web
+```
 
 ---
 
