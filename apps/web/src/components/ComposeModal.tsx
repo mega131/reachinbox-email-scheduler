@@ -65,15 +65,33 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Parse and commit whatever is typed in recipientInput
+  const commitRecipientInput = (): RecipientItem[] => {
+    if (!recipientInput.trim()) return recipients;
+    const items = recipientInput
+      .split(/[,;\s]+/)
+      .map((s) => s.trim().replace(/['"<>]/g, ''))
+      .filter((s) => s.includes('@'));
+
+    if (items.length > 0) {
+      const updated = [...recipients];
+      for (const email of items) {
+        if (!updated.some((r) => r.email.toLowerCase() === email.toLowerCase())) {
+          updated.push({ email });
+        }
+      }
+      setRecipients(updated);
+      setRecipientInput('');
+      return updated;
+    }
+    return recipients;
+  };
+
   // Add individual recipient
   const handleAddRecipient = (e: React.KeyboardEvent) => {
-    if ((e.key === 'Enter' || e.key === ',') && recipientInput.trim()) {
+    if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      const email = recipientInput.trim().replace(/,/g, '');
-      if (email.includes('@') && !recipients.some((r) => r.email === email)) {
-        setRecipients([...recipients, { email }]);
-        setRecipientInput('');
-      }
+      commitRecipientInput();
     }
   };
 
@@ -137,8 +155,10 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
   };
 
   const handleScheduleSubmit = async (instant = false) => {
-    if (recipients.length === 0) {
-      alert('Please add at least one recipient or upload a list.');
+    const targetRecipients = commitRecipientInput();
+
+    if (targetRecipients.length === 0) {
+      alert('Please enter a recipient email in the "To" box (e.g. client@domain.com) or click "Upload List".');
       return;
     }
 
@@ -159,7 +179,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
         minDelayMs: delayMs,
         hourlyLimit: limit,
         idempotencyKey: `campaign-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-        recipients
+        recipients: targetRecipients
       };
 
       await apiRequest('/campaigns', {
@@ -356,9 +376,20 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                 value={recipientInput}
                 onChange={(e) => setRecipientInput(e.target.value)}
                 onKeyDown={handleAddRecipient}
-                placeholder={recipients.length === 0 ? 'Type email and press Enter...' : ''}
-                className="flex-1 min-w-[120px] bg-transparent text-xs text-[#111827] placeholder-[#9CA3AF] focus:outline-none px-2"
+                onBlur={commitRecipientInput}
+                placeholder={recipients.length === 0 ? 'Type recipient email & press Enter...' : 'Add another email...'}
+                className="flex-1 min-w-[140px] bg-transparent text-xs text-[#111827] placeholder-[#9CA3AF] focus:outline-none px-2"
               />
+
+              {recipientInput.trim().includes('@') && (
+                <button
+                  type="button"
+                  onClick={commitRecipientInput}
+                  className="px-2 py-0.5 rounded-full bg-[#00A36C] text-white text-[11px] font-semibold hover:bg-[#008f5d] transition-colors shrink-0"
+                >
+                  + Add
+                </button>
+              )}
             </div>
 
             {/* Upload List Action on the right */}
