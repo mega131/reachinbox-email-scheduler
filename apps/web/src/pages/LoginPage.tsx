@@ -1,24 +1,29 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Sparkles } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { loginWithDev } = useAuth();
+  const { loginWithEmail, loginWithDev } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const oauthError = searchParams.get('error');
 
-  const [email, setEmail] = useState('oliver.brown@domain.io');
-  const [password, setPassword] = useState('••••••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim()) return;
     setLoading(true);
+    setErrorMessage(null);
     try {
-      await loginWithDev(email);
+      await loginWithEmail(email, password);
       navigate('/emails');
     } catch (err: any) {
-      alert(`Login error: ${err.message}`);
+      setErrorMessage(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -36,6 +41,23 @@ export const LoginPage: React.FC = () => {
         <h2 className="text-xl font-bold text-center text-[#111827] mb-6 tracking-tight">
           Login
         </h2>
+
+        {/* Error Banners */}
+        {oauthError === 'google_credentials_missing' && (
+          <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">Google OAuth Notice:</span> GOOGLE_CLIENT_ID & GOOGLE_CLIENT_SECRET are not configured in your <code>.env</code> file. You can log in with any real email address below to access your account immediately!
+            </div>
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         {/* Login with Google Button */}
         <button
@@ -70,7 +92,7 @@ export const LoginPage: React.FC = () => {
             <div className="w-full border-t border-[#E5E7EB]" />
           </div>
           <span className="relative bg-white px-3 text-xs text-[#9CA3AF]">
-            or sign up through email
+            or sign in with email
           </span>
         </div>
 
@@ -107,19 +129,9 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Helper Note for Evaluator */}
-        <div className="mt-6 pt-4 border-t border-[#F3F4F6] text-center">
-          <button
-            type="button"
-            onClick={async () => {
-              await loginWithDev('oliver.brown@domain.io');
-              navigate('/emails');
-            }}
-            className="inline-flex items-center gap-1.5 text-xs text-[#00A36C] hover:text-[#008f5d] font-medium"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Instant Demo Session (Oliver Brown)</span>
-          </button>
+        {/* Secure session note */}
+        <div className="mt-6 pt-4 border-t border-[#F3F4F6] text-center text-[11px] text-[#9CA3AF]">
+          Protected with HttpOnly session cookies & PostgreSQL real storage
         </div>
       </div>
     </div>

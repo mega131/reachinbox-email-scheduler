@@ -23,6 +23,7 @@ import {
   X
 } from 'lucide-react';
 import { apiRequest } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import { RecipientItem } from '@reachinbox/shared';
 
 interface ComposeModalProps {
@@ -38,19 +39,17 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const { user } = useAuth();
+
   // Form State
-  const [fromEmail] = useState('oliver.brown@domain.io');
+  const fromEmail = user?.email || 'user@reachinbox.ai';
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [delayBetweenEmails, setDelayBetweenEmails] = useState('02');
   const [hourlyLimit, setHourlyLimit] = useState('50');
 
-  // Recipients State
-  const [recipients, setRecipients] = useState<RecipientItem[]>([
-    { email: 'tom@email.com', name: 'Tom' },
-    { email: 'sarah@email.com', name: 'Sarah' },
-    { email: 'clara@email.com', name: 'Clara' }
-  ]);
+  // Recipients State - starts empty for real user leads
+  const [recipients, setRecipients] = useState<RecipientItem[]>([]);
   const [recipientInput, setRecipientInput] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [detectedMessage, setDetectedMessage] = useState<string | null>(null);

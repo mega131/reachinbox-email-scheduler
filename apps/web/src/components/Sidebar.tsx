@@ -32,14 +32,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenCompose, counts }) => {
     }
   };
 
-  const displayName = user?.name || 'Oliver Brown';
-  const displayEmail = user?.email || 'oliver.brown@domain.io';
+  const displayName = user?.name || user?.email?.split('@')[0] || 'User';
+  const displayEmail = user?.email || '';
   const initials = displayName
     .split(' ')
+    .filter(Boolean)
     .map((n) => n[0])
     .join('')
     .substring(0, 2)
-    .toUpperCase() || 'OB';
+    .toUpperCase() || 'U';
 
   return (
     <aside className="w-64 bg-white border-r border-[#E5E7EB] flex flex-col shrink-0 h-screen sticky top-0 font-sans">

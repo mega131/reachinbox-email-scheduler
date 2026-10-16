@@ -73,7 +73,7 @@ export interface UserDTO {
   email: string;
   name: string;
   avatarUrl?: string | null;
-  googleId: string;
+  googleId?: string | null;
   createdAt: string;
 }
 

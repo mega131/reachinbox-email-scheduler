@@ -124,25 +124,47 @@ export async function processGoogleCallback(
   };
 }
 
-export async function handleDevLogin(customEmail?: string): Promise<AuthenticatedUser> {
-  const email = (customEmail || 'demo.user@reachinbox.ai').toLowerCase();
-  const name = 'ReachInbox Demo Operator';
-  const googleId = `dev-google-sub-${crypto.createHash('md5').update(email).digest('hex')}`;
-  const avatarUrl = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+export async function handleEmailLogin(
+  customEmail: string,
+  password?: string,
+  customName?: string
+): Promise<AuthenticatedUser> {
+  const email = (customEmail || '').trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    throw new Error('Please enter a valid email address');
+  }
+
+  // Format real name from email (e.g. "john.smith@gmail.com" -> "John Smith")
+  const defaultName = email
+    .split('@')[0]
+    .split(/[._-]/)
+    .filter(Boolean)
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join(' ') || 'User';
+
+  const name = customName?.trim() || defaultName;
+  const googleId = `user-auth-${crypto.createHash('sha256').update(email).digest('hex').substring(0, 24)}`;
+  const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=00A36C,2563EB,7C3AED&textColor=FFFFFF`;
 
   let user = await prisma.user.findUnique({
-    where: { googleId }
+    where: { email }
   });
 
   if (!user) {
-    user = await prisma.user.upsert({
-      where: { email },
-      update: { googleId, name, avatarUrl },
-      create: {
+    user = await prisma.user.create({
+      data: {
         googleId,
         email,
         name,
         avatarUrl
+      }
+    });
+  } else {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        name: user.name || name,
+        avatarUrl: user.avatarUrl || avatarUrl
       }
     });
   }
@@ -156,6 +178,10 @@ export async function handleDevLogin(customEmail?: string): Promise<Authenticate
     googleId: user.googleId,
     avatarUrl: user.avatarUrl
   };
+}
+
+export async function handleDevLogin(customEmail?: string): Promise<AuthenticatedUser> {
+  return handleEmailLogin(customEmail || 'operator@reachinbox.ai');
 }
 
 async function ensureDefaultSender(userId: string, userEmail: string, userName: string): Promise<void> {

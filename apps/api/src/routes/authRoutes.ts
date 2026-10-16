@@ -2,7 +2,8 @@ import { Router, Request, Response } from 'express';
 import {
   generateGoogleAuthUrl,
   processGoogleCallback,
-  handleDevLogin
+  handleDevLogin,
+  handleEmailLogin
 } from '../services/authService.js';
 import {
   requireAuth,
@@ -26,7 +27,7 @@ router.get('/google', (req: Request, res: Response) => {
     });
     res.redirect(url);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.redirect(`${env.FRONTEND_URL}/login?error=google_credentials_missing`);
   }
 });
 
@@ -61,6 +62,25 @@ router.get('/google/callback', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('OAuth Callback Error:', err.message);
     res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent(err.message)}`);
+  }
+});
+
+// POST /api/auth/login
+// Real email authentication (creates or logs into real user account)
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password, name } = req.body;
+    const user = await handleEmailLogin(email, password, name);
+    const sessionToken = signUserSessionToken(user);
+    setSessionCookie(res, sessionToken);
+
+    res.json({
+      success: true,
+      user,
+      token: sessionToken
+    });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
   }
 });
 

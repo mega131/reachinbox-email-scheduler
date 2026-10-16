@@ -5,6 +5,7 @@ import { UserDTO } from '@reachinbox/shared';
 interface AuthContextType {
   user: UserDTO | null;
   loading: boolean;
+  loginWithEmail: (email: string, password?: string) => Promise<void>;
   loginWithDev: (email?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -30,6 +31,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     fetchCurrentUser();
   }, []);
+
+  const loginWithEmail = async (email: string, password?: string) => {
+    setLoading(true);
+    try {
+      const data = await apiRequest<{ user: UserDTO }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+      setUser(data.user);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loginWithDev = async (email?: string) => {
     setLoading(true);
@@ -64,6 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         loading,
+        loginWithEmail,
         loginWithDev,
         logout,
         refreshUser

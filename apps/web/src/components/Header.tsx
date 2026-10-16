@@ -81,10 +81,10 @@ export const Header: React.FC<HeaderProps> = ({
           )}
           <div className="hidden md:block text-left">
             <div className="text-xs font-bold text-[#111827] leading-none">
-              {user?.name || 'Oliver Brown'}
+              {user?.name || user?.email?.split('@')[0] || 'User'}
             </div>
             <div className="text-[10px] text-[#6B7280] leading-tight mt-0.5">
-              {user?.email || 'oliver.brown@domain.io'}
+              {user?.email || ''}
             </div>
           </div>
           <button
