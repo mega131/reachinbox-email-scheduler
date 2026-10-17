@@ -504,3 +504,23 @@ Follow this suggested sequence when recording your 5-minute Loom/demo video:
    - Schedule a campaign exceeding the hourly quota (e.g., hourly limit = 2).
    - Demonstrate in the worker logs that excess jobs are automatically **deferred** to the next hour window.
    - Show the rate-limit alert received in your connected Slack channel.
+
+---
+
+## ⚖️ Assumptions, Shortcuts & Architectural Trade-offs
+
+### 1. Key Assumptions
+- **Simulated SMTP Delivery**: Ethereal Email is used for simulated outreach delivery instead of live production SMTP (e.g. AWS SES or SendGrid). This allows evaluators to safely test bulk email delivery and inspect live rendered HTML emails via Ethereal preview URLs without purchasing domains or risking real spam penalties.
+- **UTC Standardization**: All scheduled timestamps, execution windows, and rate-limit buckets are computed and stored in ISO 8601 UTC across PostgreSQL, Redis, and React to prevent timezone drift or Daylight Saving Time anomalies.
+- **Multi-Tenant Sender Isolation**: Rate limits are scoped per sender account (`ratelimit:sender:{id}:{hour}`) rather than globally, reflecting real-world cold outreach workflows where multiple sending domains are warmed up simultaneously.
+
+### 2. Practical Shortcuts for Evaluators
+- **Instant Dev Demo Mode**: While full Google OAuth 2.0 / OpenID Connect is implemented with CSRF state verification and `google-auth-library`, reviewers can log in with any email and password immediately without needing to set up a Google Cloud Console OAuth Client ID.
+- **Auto-Provisioned Ethereal Inboxes**: If `ETHEREAL_USER` and `ETHEREAL_PASS` are blank in `.env`, the worker dynamically calls `nodemailer.createTestAccount()` on demand and caches the credentials. No manual account registration is required to run the full outreach demo.
+- **Resilient Search Fallback**: If an Elasticsearch cluster is not running on port 9200, the API transparently falls back to PostgreSQL `ILIKE` full-text search, ensuring search functionality remains 100% operational in lightweight local test environments.
+
+### 3. Architectural Trade-offs
+- **Transactional Outbox vs. Direct BullMQ Enqueue**: We chose the Transactional Outbox pattern over directly inserting into BullMQ inside the API request handler. *Trade-off*: Requires an asynchronous dispatch step, but guarantees zero dropped jobs if Redis experiences network latency during request processing.
+- **Delayed Jobs vs. Polling Cron**: We chose Redis-backed BullMQ delayed jobs (`delay = targetTime - now`) over polling cron jobs (`node-cron`). *Trade-off*: Relies on Redis persistence (AOF/RDB) for restart survival, but eliminates database polling overhead and delivers millisecond precision.
+- **Job Deferral vs. Dropping on Rate Limit**: When hourly rate limits are exhausted, jobs are rescheduled to the beginning of the next hourly window (`delay = nextHour - now`). *Trade-off*: Campaigns take longer to complete during high volume, but outreach order is preserved and zero jobs are dropped or marked as failed.
+
