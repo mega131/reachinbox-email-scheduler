@@ -176,7 +176,7 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
           <div className="p-16 text-center text-xs text-[#9CA3AF]">
             Loading emails...
           </div>
-        ) : result.data.length === 0 ? (
+        ) : !result?.data || result.data.length === 0 ? (
           <div className="p-16 text-center">
             <div className="text-sm font-semibold text-[#111827] mb-1">No emails in this folder</div>
             <p className="text-xs text-[#6B7280] mb-4">
@@ -192,7 +192,7 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
           </div>
         ) : (
           <div className="divide-y divide-[#E5E7EB]">
-            {result.data.map((email) => {
+            {(result.data || []).map((email) => {
               const isScheduled = email.status === EmailStatus.SCHEDULED || email.status === EmailStatus.QUEUED || email.status === EmailStatus.RATE_LIMITED;
               const isSent = email.status === EmailStatus.SENT;
 
@@ -211,7 +211,7 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
 
                   {/* Recipient / Name */}
                   <div className="w-44 font-semibold text-[#111827] truncate shrink-0">
-                    To: {email.recipientEmail.split('@')[0]}
+                    To: {email.recipientEmail ? email.recipientEmail.split('@')[0] : 'Recipient'}
                   </div>
 
                   {/* Status Pill matching Figma: Amber "Due: date" or Green "Sent" */}
@@ -244,7 +244,7 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
                     </span>
                     <span className="text-[#9CA3AF] shrink-0">-</span>
                     <span className="truncate text-[#4B5563]">
-                      {email.body.replace(/\n/g, ' ')}
+                      {(email.body || '').replace(/\n/g, ' ')}
                     </span>
                   </div>
 
@@ -275,21 +275,21 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
         )}
 
         {/* Pagination Bar */}
-        {result.pagination.totalPages > 1 && (
+        {(result?.pagination?.totalPages ?? 0) > 1 && (
           <div className="px-6 py-4 border-t border-[#E5E7EB] flex items-center justify-between text-xs text-[#6B7280]">
             <div>
-              Page {result.pagination.page} of {result.pagination.totalPages} ({result.pagination.total} records)
+              Page {result?.pagination?.page ?? 1} of {result?.pagination?.totalPages ?? 1} ({result?.pagination?.total ?? 0} records)
             </div>
             <div className="flex items-center gap-2">
               <button
-                disabled={!result.pagination.hasPrevPage}
+                disabled={!result?.pagination?.hasPrevPage}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 className="p-1.5 rounded-lg border border-[#E5E7EB] hover:bg-[#F9FAFB] disabled:opacity-40"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
-                disabled={!result.pagination.hasNextPage}
+                disabled={!result?.pagination?.hasNextPage}
                 onClick={() => setPage((p) => p + 1)}
                 className="p-1.5 rounded-lg border border-[#E5E7EB] hover:bg-[#F9FAFB] disabled:opacity-40"
               >
@@ -299,6 +299,7 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
           </div>
         )}
       </div>
+
 
       {/* Reading View Modal */}
       <ReadingViewModal
