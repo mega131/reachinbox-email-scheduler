@@ -66,6 +66,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Parse and commit whatever is typed in recipientInput
   const commitRecipientInput = (): RecipientItem[] => {
@@ -122,9 +123,10 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
       if (result.preview && result.preview.length > 0) {
         setRecipients(result.preview);
         setDetectedMessage(`${result.validCount} email addresses detected from file`);
+        setFormError(null);
       }
     } catch (err: any) {
-      alert(`CSV Upload Error: ${err.message}`);
+      setFormError(`CSV Upload Error: ${err.message}`);
     } finally {
       setIsUploading(false);
     }
@@ -160,10 +162,11 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
     const targetRecipients = commitRecipientInput();
 
     if (targetRecipients.length === 0) {
-      alert('Please enter a recipient email in the "To" box (e.g. client@domain.com) or click "Upload List".');
+      setFormError('Please enter a recipient email in the "To" box (e.g. client@domain.com) or click "Upload List".');
       return;
     }
 
+    setFormError(null);
     setIsSubmitting(true);
     try {
       const scheduledIso = instant
@@ -209,7 +212,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
         })
       );
     } catch (err: any) {
-      alert(`Scheduling error: ${err.message}`);
+      setFormError(`Scheduling error: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -351,6 +354,19 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
             )}
           </div>
         </div>
+
+        {formError && (
+          <div className="px-6 py-2.5 bg-rose-50 border-b border-rose-200 text-rose-700 text-xs flex items-center justify-between font-medium">
+            <span>{formError}</span>
+            <button
+              type="button"
+              onClick={() => setFormError(null)}
+              className="text-rose-500 hover:text-rose-800 text-base leading-none font-bold ml-2"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* 2. Main Form Canvas */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">

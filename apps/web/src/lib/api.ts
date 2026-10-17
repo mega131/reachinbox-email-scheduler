@@ -328,14 +328,15 @@ export async function apiRequest<T = any>(
       }
     });
 
-    // If server responded with 405 (Static CDN) or 404 HTML, gracefully use client-side simulation
-    if (response.status === 405 || response.status === 404) {
+    // If server responded with 405 (Static CDN), 404, or returned HTML (Vercel rewrite to index.html)
+    const contentType = response.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+
+    if (response.status === 405 || response.status === 404 || !isJson) {
       return handleClientSimulation<T>(endpoint, options);
     }
 
-    const contentType = response.headers.get('content-type') || '';
-    const isJson = contentType.includes('application/json');
-    const responseData = isJson ? await response.json() : await response.text();
+    const responseData = await response.json();
 
     if (!response.ok) {
       // Normal 401 on /auth/me when unauthenticated
@@ -345,18 +346,13 @@ export async function apiRequest<T = any>(
         throw err;
       }
 
-      // If static host returns HTML error page (e.g. 405 / 500)
-      if (response.status >= 400 && !isJson) {
-        return handleClientSimulation<T>(endpoint, options);
-      }
-
       const errorMsg =
-        isJson && responseData.error
+        responseData && responseData.error
           ? responseData.error
           : `Request failed with status ${response.status}`;
       const error = new Error(errorMsg);
       (error as any).status = response.status;
-      (error as any).details = isJson ? responseData.details : null;
+      (error as any).details = responseData ? responseData.details : null;
       throw error;
     }
 
