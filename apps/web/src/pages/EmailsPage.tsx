@@ -16,7 +16,6 @@ import {
 import { apiRequest } from '../lib/api';
 import { EmailRecordDTO, EmailStatus, PaginatedResult } from '@reachinbox/shared';
 import { ReadingViewModal } from '../components/ReadingViewModal';
-import { ComposeModal } from '../components/ComposeModal';
 
 interface EmailsPageProps {
   searchQuery?: string;
@@ -108,6 +107,12 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
 
   useEffect(() => {
     fetchEmails();
+
+    const handleRefresh = () => {
+      fetchEmails();
+    };
+    window.addEventListener('reachinbox-refresh-emails', handleRefresh);
+    return () => window.removeEventListener('reachinbox-refresh-emails', handleRefresh);
   }, [currentTab, page, searchQuery]);
 
   return (
@@ -305,15 +310,6 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
       <ReadingViewModal
         email={selectedEmail}
         onClose={() => setSelectedEmail(null)}
-      />
-
-      {/* Compose Modal */}
-      <ComposeModal
-        isOpen={isComposeOpen}
-        onClose={onCloseCompose || (() => {})}
-        onScheduledSuccess={() => {
-          fetchEmails();
-        }}
       />
     </div>
   );

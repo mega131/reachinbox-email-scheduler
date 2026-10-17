@@ -4,6 +4,108 @@ export interface ApiResponse<T = any> {
   details?: any;
 }
 
+const SEED_SCHEDULED = [
+  {
+    id: 'eml-sched-1',
+    campaignId: 'cmp-101',
+    campaignName: 'Enterprise Outreach Q4',
+    ownerId: 'usr_demo_evaluator',
+    recipientEmail: 'alex.rivera@fintech.io',
+    subject: 'Scalable Outreach Engine Architecture',
+    body: 'Hi Alex, following up on our discussion regarding zero-cron scheduling with Redis BullMQ and atomic Lua rate limiters.',
+    scheduledTime: new Date(Date.now() + 3600000).toISOString(),
+    status: 'SCHEDULED',
+    attempts: 0,
+    bullmqJobId: 'job-cmp-101-0-alex',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    senderEmail: 'oliver.brown@domain.io'
+  },
+  {
+    id: 'eml-sched-2',
+    campaignId: 'cmp-102',
+    campaignName: 'Product Demo Series',
+    ownerId: 'usr_demo_evaluator',
+    recipientEmail: 'sarah.connor@cyberdyne.io',
+    subject: 'ReachInbox Platform Walkthrough',
+    body: 'Hi Sarah, would love to show you how ReachInbox handles high-concurrency outreach with persistent job queues and automated recovery.',
+    scheduledTime: new Date(Date.now() + 86400000).toISOString(),
+    status: 'SCHEDULED',
+    attempts: 0,
+    bullmqJobId: 'job-cmp-102-1-sarah',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    senderEmail: 'oliver.brown@domain.io'
+  }
+];
+
+const SEED_SENT = [
+  {
+    id: 'eml-sent-1',
+    campaignId: 'cmp-100',
+    campaignName: 'Executive Intro Batch',
+    ownerId: 'usr_demo_evaluator',
+    recipientEmail: 'client@enterprise.com',
+    subject: 'Product Demo & Architecture Proposal',
+    body: 'Hello team, here is the proposal for ReachInbox zero-cron email scheduler with Ethereal SMTP verification.',
+    scheduledTime: new Date(Date.now() - 3600000).toISOString(),
+    sentTime: new Date(Date.now() - 3590000).toISOString(),
+    status: 'SENT',
+    attempts: 1,
+    bullmqJobId: 'job-cmp-100-0-client',
+    etherealPreviewUrl: 'https://ethereal.email/messages',
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+    updatedAt: new Date(Date.now() - 3590000).toISOString(),
+    senderEmail: 'oliver.brown@domain.io'
+  },
+  {
+    id: 'eml-sent-2',
+    campaignId: 'cmp-099',
+    campaignName: 'Partnership Wave #1',
+    ownerId: 'usr_demo_evaluator',
+    recipientEmail: 'partnerships@saasgrowth.io',
+    subject: 'Outbox Labs & ReachInbox Integration',
+    body: 'Hi team, sharing the integration details and BullMQ worker queue configuration for Outbox Labs.',
+    scheduledTime: new Date(Date.now() - 7200000).toISOString(),
+    sentTime: new Date(Date.now() - 7192000).toISOString(),
+    status: 'SENT',
+    attempts: 1,
+    bullmqJobId: 'job-cmp-099-0-partners',
+    etherealPreviewUrl: 'https://ethereal.email/messages',
+    createdAt: new Date(Date.now() - 7200000).toISOString(),
+    updatedAt: new Date(Date.now() - 7192000).toISOString(),
+    senderEmail: 'oliver.brown@domain.io'
+  }
+];
+
+function getStoredScheduled(): any[] {
+  const raw = localStorage.getItem('reachinbox_scheduled_emails');
+  if (!raw) {
+    localStorage.setItem('reachinbox_scheduled_emails', JSON.stringify(SEED_SCHEDULED));
+    return SEED_SCHEDULED;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : SEED_SCHEDULED;
+  } catch {
+    return SEED_SCHEDULED;
+  }
+}
+
+function getStoredSent(): any[] {
+  const raw = localStorage.getItem('reachinbox_sent_emails');
+  if (!raw) {
+    localStorage.setItem('reachinbox_sent_emails', JSON.stringify(SEED_SENT));
+    return SEED_SENT;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : SEED_SENT;
+  } catch {
+    return SEED_SENT;
+  }
+}
+
 function handleClientSimulation<T>(endpoint: string, options: RequestInit = {}): T {
   const cleanEndpoint = endpoint.split('?')[0];
 
@@ -49,34 +151,14 @@ function handleClientSimulation<T>(endpoint: string, options: RequestInit = {}):
   }
 
   if (cleanEndpoint === '/emails/scheduled') {
-    const raw = localStorage.getItem('reachinbox_scheduled_emails');
-    const items = raw
-      ? JSON.parse(raw)
-      : [
-          {
-            id: 'eml-sched-1',
-            campaignId: 'cmp-1',
-            campaignName: 'Q4 Product Launch',
-            ownerId: 'usr_demo_evaluator',
-            recipientEmail: 'client@enterprise.com',
-            subject: 'Product Demo & Architecture Proposal',
-            body: 'Hello team, here is the proposal for ReachInbox zero-cron email scheduler.',
-            scheduledTime: new Date(Date.now() + 3600000).toISOString(),
-            status: 'SCHEDULED',
-            attempts: 0,
-            bullmqJobId: 'job-cmp-1-0-client',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            senderEmail: 'outreach@domain.io'
-          }
-        ];
+    const items = getStoredScheduled();
     return {
       data: items,
       pagination: {
         page: 1,
         limit: 20,
         total: items.length,
-        totalPages: 1,
+        totalPages: Math.max(1, Math.ceil(items.length / 20)),
         hasNextPage: false,
         hasPrevPage: false
       }
@@ -84,36 +166,14 @@ function handleClientSimulation<T>(endpoint: string, options: RequestInit = {}):
   }
 
   if (cleanEndpoint === '/emails/sent') {
-    const raw = localStorage.getItem('reachinbox_sent_emails');
-    const items = raw
-      ? JSON.parse(raw)
-      : [
-          {
-            id: 'eml-sent-1',
-            campaignId: 'cmp-0',
-            campaignName: 'Outreach Wave #1',
-            ownerId: 'usr_demo_evaluator',
-            recipientEmail: 'client@enterprise.com',
-            subject: 'Product Demo & Architecture Proposal',
-            body: 'Hello team, here is the proposal for ReachInbox zero-cron email scheduler.',
-            scheduledTime: new Date(Date.now() - 3600000).toISOString(),
-            sentTime: new Date(Date.now() - 3590000).toISOString(),
-            status: 'SENT',
-            attempts: 1,
-            bullmqJobId: 'job-cmvc1d07e000713ttcamanb32-0-636c69656e74',
-            etherealPreviewUrl: 'https://ethereal.email/message/a1b2c3d4e5f6',
-            createdAt: new Date(Date.now() - 3600000).toISOString(),
-            updatedAt: new Date(Date.now() - 3590000).toISOString(),
-            senderEmail: 'outreach@domain.io'
-          }
-        ];
+    const items = getStoredSent();
     return {
       data: items,
       pagination: {
         page: 1,
         limit: 20,
         total: items.length,
-        totalPages: 1,
+        totalPages: Math.max(1, Math.ceil(items.length / 20)),
         hasNextPage: false,
         hasPrevPage: false
       }
@@ -124,37 +184,52 @@ function handleClientSimulation<T>(endpoint: string, options: RequestInit = {}):
     try {
       if (options.body && typeof options.body === 'string') {
         const payload = JSON.parse(options.body);
-        const scheduledList: any[] = [];
-        for (let i = 0; i < (payload.recipients || []).length; i++) {
-          const rec = payload.recipients[i];
-          scheduledList.push({
-            id: `eml-sched-${Date.now()}-${i}`,
+        const scheduled = getStoredScheduled();
+        const sent = getStoredSent();
+
+        const recipients = payload.recipients || [];
+        const isInstant =
+          !payload.startTime ||
+          new Date(payload.startTime).getTime() <= Date.now() + 15000;
+
+        const newItems: any[] = [];
+        for (let i = 0; i < recipients.length; i++) {
+          const rec = recipients[i];
+          const newEmail = {
+            id: `eml-${isInstant ? 'sent' : 'sched'}-${Date.now()}-${i}`,
             campaignId: `cmp-${Date.now()}`,
             campaignName: payload.name || 'Outreach Campaign',
             ownerId: 'usr_demo_evaluator',
             recipientEmail: rec.email,
-            subject: payload.subject,
-            body: payload.body,
-            scheduledTime: payload.startTime || new Date(Date.now() + 5000).toISOString(),
-            status: 'SCHEDULED',
-            attempts: 0,
-            bullmqJobId: `job-${Date.now()}-${i}`,
+            subject: payload.subject || 'No Subject',
+            body: payload.body || '',
+            scheduledTime: payload.startTime || new Date().toISOString(),
+            sentTime: isInstant ? new Date().toISOString() : undefined,
+            status: isInstant ? 'SENT' : 'SCHEDULED',
+            attempts: isInstant ? 1 : 0,
+            bullmqJobId: `job-${Date.now()}-${i}-${(rec.email || 'user').split('@')[0]}`,
+            etherealPreviewUrl: isInstant ? 'https://ethereal.email/messages' : undefined,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            senderEmail: 'outreach@domain.io'
-          });
+            senderEmail: 'oliver.brown@domain.io'
+          };
+          newItems.push(newEmail);
         }
-        const existing = JSON.parse(localStorage.getItem('reachinbox_scheduled_emails') || '[]');
-        localStorage.setItem(
-          'reachinbox_scheduled_emails',
-          JSON.stringify([...scheduledList, ...existing])
-        );
+
+        if (isInstant) {
+          localStorage.setItem('reachinbox_sent_emails', JSON.stringify([...newItems, ...sent]));
+        } else {
+          localStorage.setItem('reachinbox_scheduled_emails', JSON.stringify([...newItems, ...scheduled]));
+        }
+
         return {
-          message: 'Campaign scheduled successfully',
-          scheduledCount: scheduledList.length
+          message: isInstant ? 'Emails dispatched successfully' : 'Campaign scheduled successfully',
+          scheduledCount: newItems.length
         } as T;
       }
-    } catch {}
+    } catch (err) {
+      console.error('Campaign simulation error:', err);
+    }
     return { message: 'Campaign scheduled successfully', scheduledCount: 1 } as T;
   }
 
@@ -170,13 +245,30 @@ function handleClientSimulation<T>(endpoint: string, options: RequestInit = {}):
   }
 
   if (cleanEndpoint === '/search') {
+    const scheduled = getStoredScheduled();
+    const sent = getStoredSent();
+    let combined = [...scheduled, ...sent].sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+
+    const urlParams = new URLSearchParams(endpoint.split('?')[1] || '');
+    const q = (urlParams.get('q') || '').toLowerCase().trim();
+    if (q) {
+      combined = combined.filter(
+        (em) =>
+          em.recipientEmail?.toLowerCase().includes(q) ||
+          em.subject?.toLowerCase().includes(q) ||
+          em.body?.toLowerCase().includes(q)
+      );
+    }
+
     return {
-      data: [],
+      data: combined,
       pagination: {
         page: 1,
         limit: 20,
-        total: 0,
-        totalPages: 1,
+        total: combined.length,
+        totalPages: Math.max(1, Math.ceil(combined.length / 20)),
         hasNextPage: false,
         hasPrevPage: false
       },
@@ -185,10 +277,12 @@ function handleClientSimulation<T>(endpoint: string, options: RequestInit = {}):
   }
 
   if (cleanEndpoint === '/dashboard/stats') {
+    const scheduled = getStoredScheduled();
+    const sent = getStoredSent();
     return {
-      totalEmails: 12,
-      scheduledEmails: 1,
-      sentEmails: 11,
+      totalEmails: scheduled.length + sent.length,
+      scheduledEmails: scheduled.length,
+      sentEmails: sent.length,
       failedEmails: 0,
       activeCampaigns: 2,
       rateLimitUsage: {
@@ -198,9 +292,9 @@ function handleClientSimulation<T>(endpoint: string, options: RequestInit = {}):
       },
       bullmqQueue: {
         active: 0,
-        waiting: 1,
-        delayed: 1,
-        completed: 11,
+        waiting: scheduled.length,
+        delayed: scheduled.length,
+        completed: sent.length,
         failed: 0
       }
     } as T;

@@ -39,6 +39,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <Header
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          onRefresh={() => window.dispatchEvent(new CustomEvent('reachinbox-refresh-emails'))}
         />
         <main className="flex-1 overflow-y-auto">
           {React.cloneElement(children as React.ReactElement, {
@@ -55,6 +56,9 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <ComposeModal
         isOpen={isComposeOpen}
         onClose={() => setIsComposeOpen(false)}
+        onScheduledSuccess={() => {
+          window.dispatchEvent(new CustomEvent('reachinbox-refresh-emails'));
+        }}
       />
     </div>
   );

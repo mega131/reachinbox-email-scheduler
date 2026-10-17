@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Paperclip,
@@ -40,6 +41,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
   if (!isOpen) return null;
 
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Form State
   const fromEmail = user?.email || 'user@reachinbox.ai';
@@ -189,7 +191,23 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
 
       setShowSendLaterPopover(false);
       onClose();
+
+      // Reset form fields
+      setSubject('');
+      setBody('');
+      setRecipients([]);
+      setRecipientInput('');
+
+      // Auto-navigate to Sent tab if sent now, or Scheduled tab if scheduled for later
+      const targetTab = instant ? 'sent' : 'scheduled';
+      navigate(`/emails?tab=${targetTab}`);
+
       if (onScheduledSuccess) onScheduledSuccess();
+      window.dispatchEvent(
+        new CustomEvent('reachinbox-refresh-emails', {
+          detail: { tab: targetTab, instant }
+        })
+      );
     } catch (err: any) {
       alert(`Scheduling error: ${err.message}`);
     } finally {
