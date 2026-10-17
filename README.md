@@ -2,7 +2,6 @@
 
 > **Live Hosted Demo**: [https://reachinbox-email-scheduler-git-main-mega131s-projects.vercel.app](https://reachinbox-email-scheduler-git-main-mega131s-projects.vercel.app)  
 > **GitHub Repository**: [https://github.com/mega131/reachinbox-email-scheduler](https://github.com/mega131/reachinbox-email-scheduler)  
-> **ClickUp Submission Form**: [Outbox Labs Assignment Submission Form](https://forms.clickup.com/9005062261/f/8cbwp3n-8876/6NNNJ92DV93PQTAYST)  
 
 Production-grade full-stack email outreach scheduling engine built for high concurrency, persistent Redis-backed BullMQ job queues, strict zero-cron architecture, atomic distributed rate-limiting, Ethereal SMTP simulated delivery, Elasticsearch full-text search, and real Slack rate-limit alerting.
 
