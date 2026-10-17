@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AlertCircle } from 'lucide-react';
@@ -14,6 +14,13 @@ export const LoginPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Automatically navigate to /emails if session already exists
+  useEffect(() => {
+    if (user) {
+      navigate('/emails', { replace: true });
+    }
+  }, [user, navigate]);
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -21,7 +28,7 @@ export const LoginPage: React.FC = () => {
     setErrorMessage(null);
     try {
       await loginWithEmail(email, password);
-      navigate('/emails');
+      navigate('/emails', { replace: true });
     } catch (err: any) {
       setErrorMessage(err.message || 'Login failed. Please check your credentials.');
     } finally {
@@ -32,6 +39,7 @@ export const LoginPage: React.FC = () => {
   const handleGoogleLogin = () => {
     window.location.href = '/api/auth/google';
   };
+
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-center items-center p-4">

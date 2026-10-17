@@ -69,26 +69,33 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
       }
 
       const res = await apiRequest<PaginatedResult<EmailRecordDTO>>(endpoint);
-      setResult(res);
+      setResult(res || {
+        data: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 1, hasNextPage: false, hasPrevPage: false }
+      });
 
       // Fetch overall counts for sidebar badges
       const [allRes, scheduledRes, sentRes] = await Promise.all([
-        apiRequest<PaginatedResult<EmailRecordDTO>>('/search?page=1&limit=1'),
-        apiRequest<PaginatedResult<EmailRecordDTO>>('/emails/scheduled?page=1&limit=1'),
-        apiRequest<PaginatedResult<EmailRecordDTO>>('/emails/sent?page=1&limit=1')
+        apiRequest<PaginatedResult<EmailRecordDTO>>('/search?page=1&limit=1').catch(() => null),
+        apiRequest<PaginatedResult<EmailRecordDTO>>('/emails/scheduled?page=1&limit=1').catch(() => null),
+        apiRequest<PaginatedResult<EmailRecordDTO>>('/emails/sent?page=1&limit=1').catch(() => null)
       ]);
 
+      const totalAll = allRes?.pagination?.total ?? 0;
+      const totalSched = scheduledRes?.pagination?.total ?? 1;
+      const totalSent = sentRes?.pagination?.total ?? 1;
+
       setTabCounts({
-        all: allRes.pagination.total,
-        scheduled: scheduledRes.pagination.total,
-        sent: sentRes.pagination.total
+        all: totalAll,
+        scheduled: totalSched,
+        sent: totalSent
       });
 
       if (onCountsUpdate) {
         onCountsUpdate({
-          inbox: allRes.pagination.total,
-          scheduled: scheduledRes.pagination.total,
-          sent: sentRes.pagination.total
+          inbox: totalAll,
+          scheduled: totalSched,
+          sent: totalSent
         });
       }
     } catch (err: any) {
@@ -96,6 +103,7 @@ export const EmailsPage: React.FC<EmailsPageProps> = ({
     } finally {
       setLoading(false);
     }
+
   };
 
   useEffect(() => {
