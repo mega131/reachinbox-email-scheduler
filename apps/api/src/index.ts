@@ -89,10 +89,14 @@ const server = app.listen(env.PORT, async () => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received. Closing HTTP server...');
+async function gracefulShutdown(signal: string) {
+  console.log(`\n🛑 Received ${signal}. Closing API HTTP server...`);
   server.close(() => {
     console.log('HTTP server closed.');
     process.exit(0);
   });
-});
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+

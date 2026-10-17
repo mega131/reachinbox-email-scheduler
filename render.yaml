@@ -1,0 +1,83 @@
+services:
+  # 1. Express Backend REST API
+  - type: web
+    name: reachinbox-api
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build --workspace=@reachinbox/shared && npm run build --workspace=reachinbox-api
+    startCommand: npm run start --workspace=reachinbox-api
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: reachinbox-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: reachinbox-redis
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ENCRYPTION_SECRET
+        generateValue: true
+      - key: DEFAULT_MIN_DELAY_MS
+        value: "2000"
+      - key: MAX_EMAILS_PER_HOUR
+        value: "200"
+      - key: WORKER_CONCURRENCY
+        value: "5"
+
+  # 2. BullMQ Asynchronous Background Worker
+  - type: worker
+    name: reachinbox-worker
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build --workspace=@reachinbox/shared && npm run build --workspace=reachinbox-worker
+    startCommand: npm run start --workspace=reachinbox-worker
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: reachinbox-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: reachinbox-redis
+          property: connectionString
+      - key: ENCRYPTION_SECRET
+        fromService:
+          type: web
+          name: reachinbox-api
+          envVarKey: ENCRYPTION_SECRET
+      - key: DEFAULT_MIN_DELAY_MS
+        value: "2000"
+      - key: MAX_EMAILS_PER_HOUR
+        value: "200"
+      - key: WORKER_CONCURRENCY
+        value: "5"
+
+  # 3. React 18 + Vite Web Dashboard
+  - type: web
+    name: reachinbox-web
+    env: static
+    buildCommand: npm install && npm run build --workspace=@reachinbox/shared && npm run build --workspace=reachinbox-web
+    staticPublishPath: apps/web/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: reachinbox-api
+          property: url
+
+# Managed Databases
+databases:
+  - name: reachinbox-postgres
+    plan: starter
+    databaseName: reachinbox_db
+    user: postgres
