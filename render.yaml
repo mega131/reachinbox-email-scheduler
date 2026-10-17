@@ -3,8 +3,8 @@ services:
   - type: web
     name: reachinbox-api
     env: node
-    plan: starter
-    buildCommand: npm install && npm run build --workspace=@reachinbox/shared && npm run build --workspace=reachinbox-api
+    plan: free
+    buildCommand: npm install && npm run build --workspace=@reachinbox/shared && npm run build --workspace=reachinbox-api && npx prisma db push
     startCommand: npm run start --workspace=reachinbox-api
     envVars:
       - key: NODE_ENV
@@ -68,16 +68,26 @@ services:
     env: static
     buildCommand: npm install && npm run build --workspace=@reachinbox/shared && npm run build --workspace=reachinbox-web
     staticPublishPath: apps/web/dist
-    envVars:
-      - key: VITE_API_URL
-        fromService:
-          type: web
-          name: reachinbox-api
-          property: url
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://reachinbox-api.onrender.com/api/*
+      - type: rewrite
+        source: /admin/*
+        destination: https://reachinbox-api.onrender.com/admin/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
 
-# Managed Databases
+  # 4. Redis In-Memory Store & Queue
+  - type: redis
+    name: reachinbox-redis
+    plan: starter
+    ipAllowList: []
+
+# 5. Managed PostgreSQL Database
 databases:
   - name: reachinbox-postgres
-    plan: starter
+    plan: free
     databaseName: reachinbox_db
-    user: postgres
+    user: reachinbox_user

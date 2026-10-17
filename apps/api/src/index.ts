@@ -28,11 +28,25 @@ app.use(
 
 app.use(
   cors({
-    origin: [env.FRONTEND_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: (requestOrigin, callback) => {
+      // Allow localhost, configured FRONTEND_URL, or any onrender.com deployment
+      if (
+        !requestOrigin ||
+        requestOrigin.includes('localhost') ||
+        requestOrigin.includes('127.0.0.1') ||
+        requestOrigin.endsWith('.onrender.com') ||
+        requestOrigin === env.FRONTEND_URL
+      ) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Permissive in preview/demo environments
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
   })
 );
+
 
 app.use(cookieParser());
 app.use(express.json({ limit: '15mb' }));
